@@ -1,0 +1,6 @@
+- name : demo on debug module
+  hosts : DEV
+  tasks :
+    - name : printing the message
+      debug :
+        msg : "Hello World!"

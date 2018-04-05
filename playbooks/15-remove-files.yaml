@@ -1,0 +1,11 @@
+- name : DEMO on removing the files
+  hosts : DEV
+  tasks :
+    - name : removing the files
+      file :
+        path : "{{item}}"
+        state : absent
+      with_items :
+        - /home/devopsuser/sample/abc
+        - /home/devopsuser/sample/def
+        - /home/devopsuser/sample/dfg

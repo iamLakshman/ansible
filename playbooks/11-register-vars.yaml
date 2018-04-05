@@ -1,0 +1,15 @@
+- name : DEMO on registering the variables
+  hosts : DEV
+  become : yes
+  tasks :
+    - name : register the variable
+      shell : id -u
+      register : output
+
+    - name : print the output variable
+      debug :
+        msg : "{{output}}"
+
+    - name : print the stdout
+      debug :
+        msg : "{{output.stdout}}"

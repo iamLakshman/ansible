@@ -1,0 +1,5 @@
+[DEV]
+student-dev-app-01 host=192.168.01
+[DEV:vars]
+username=siva
+password=admin123

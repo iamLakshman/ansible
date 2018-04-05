@@ -1,0 +1,12 @@
+- name : DEMO on installing multiple packages
+  hosts : DEV
+  become : yes
+  tasks :
+    - name : Install multiple tools
+      yum :
+        name : "{{item}}"
+        state : latest
+      with_items :
+        - httpd
+        - gcc
+        - httpd-devel

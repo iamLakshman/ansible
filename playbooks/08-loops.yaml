@@ -1,0 +1,10 @@
+- name : DEMO on loops
+  hosts : DEV
+  tasks :
+    - name : print the values from the loops
+      debug :
+        msg : "{{item}}"
+      with_items :
+        - RAM
+        - RAHIM
+        - ROBERT

@@ -1,0 +1,19 @@
+- name : DEMO on finding the files
+  hosts : DEV
+  tasks :
+    - name : find the log files
+      find :
+        paths : /home/devopsuser/sample
+        file_type : any
+        #patterns : '*.txt'
+      register : out
+
+    - name : print the output
+      debug :
+        msg : "{{out}}"
+
+    - name : remove the log files
+      file :
+        path : "{{item.path}}"
+        state : absent
+      with_items : "{{out.files}}"

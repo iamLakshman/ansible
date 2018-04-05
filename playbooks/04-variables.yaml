@@ -1,0 +1,14 @@
+- name : DEMO on variables
+  hosts : DEV
+  vars :
+    NAME : RAHIM
+  tasks :
+     - name : print the variables
+       debug :
+         msg : "Hello {{NAME}}"
+
+     - name : print the variables from task
+       vars :
+         # NAME : RAMA
+       debug :
+         msg : "Hello {{NAME}}"

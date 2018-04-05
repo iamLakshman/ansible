@@ -1,0 +1,6 @@
+- name : DEMO on variables from inventory file
+  hosts : DEV
+  tasks :
+    - name : print the variable from inventory file
+      debug :
+        msg : "hostname = {{host}}, password = {{password}}"

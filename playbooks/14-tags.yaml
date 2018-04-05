@@ -1,0 +1,29 @@
+- name : PLAY1
+  hosts : DEV
+  tags :
+    - DEV
+  tasks :
+    - name : FROM PLAY1 and TASK1
+      tags :
+        - DEVHTTPD
+      debug :
+        msg : "Hello from PLAY1 and TASK1"
+
+    - name : FROM PLAY1 and TASK2
+      tags :
+        - DEVMODJK
+      debug :
+        msg : "Hello from PLAY1 and TASK2"
+
+- name : PLAY2
+  hosts : DEV
+  tags :
+    - PROD
+  tasks :
+    - name : FROM PLAY2 and TASK1
+      debug :
+        msg : "Hello from PLAY2 and TASK1"
+
+    - name : FROM PLAY2 and TASK2
+      debug :
+        msg : "Hello from PLAY2 and TASK2"

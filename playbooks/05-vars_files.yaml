@@ -1,0 +1,8 @@
+- name : DEMO on variables from external files
+  hosts : DEV
+  vars_files :
+    - credentilas.yaml
+  tasks :
+    - name : printing the variables from external files
+      debug :
+        msg : "IP ADDRESS= {{IP}}"

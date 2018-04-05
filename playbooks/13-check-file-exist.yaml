@@ -1,0 +1,25 @@
+- name : DEMO on file exist or not
+  hosts : DEV
+  tasks :
+    - name : get the statistics of the file
+      stat :
+        path : /home/devopsuser/passwd
+      register : st
+
+    - name : print the statistics
+      debug :
+        msg : "{{st}}"
+
+    - name : check exist or not
+      debug :
+        msg : "{{st.stat.exists}}"
+
+    - name : run this task if file exists
+      debug :
+        msg : "File exist"
+      when :  st.stat.exists == true
+
+    - name : run this task if file does not exists
+      debug :
+        msg : "file does not exists"
+      when : st.stat.exists == false

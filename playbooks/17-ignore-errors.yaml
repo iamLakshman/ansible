@@ -1,0 +1,17 @@
+- name : DEMO on ignore errors
+  hosts : DEV
+  tasks :
+    - name : fail this
+      shell : /bin/true
+      register : out
+      ignore_errors : true
+
+    - name : in case of fail
+      debug :
+        msg : "task is failed"
+      when: out is failed
+
+    - name : in case of success
+      debug :
+        msg : "task is success"
+      when: out is success

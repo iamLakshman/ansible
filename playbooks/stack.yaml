@@ -1,0 +1,223 @@
+- name : create WEB layer
+  hosts : DEV
+  become : yes
+  tags :
+    - WEB
+  vars :
+    MOD_JK_URL : http://redrockdigimark.com/apachemirror/tomcat/tomcat-connectors/jk/tomcat-connectors-1.2.43-src.tar.gz
+  tasks :
+
+    - name : Define the MOD_JK src direct variable
+      shell : echo "{{MOD_JK_URL}}" | awk -F / '{print $NF}' | sed -e 's/.tar.gz//'
+      register : output
+
+    - name : print the output
+      debug :
+        msg : "{{output}}"
+
+    - name : create MOD_JK_DIR variable
+      set_fact :
+        MOD_JK_DIR : "{{output.stdout}}"
+
+    - name : print the MOD_JK_DIR
+      debug :
+        msg : "{{MOD_JK_DIR}}"
+
+    - name : download and install http
+      yum :
+        name : "{{item}}"
+        state : latest
+      with_items :
+        - httpd
+        - gcc
+        - httpd-devel
+
+    - name : start the web server
+      service :
+        name : httpd
+        state : started
+
+    #- name : download the MOD_JK
+     # get_url :
+        #url : http://redrockdigimark.com/apachemirror/tomcat/tomcat-connectors/jk/tomcat-connectors-1.2.43-src.tar.gz
+       # dest : /opt
+
+    - name : extract MOD_JK
+      unarchive :
+        src : "{{MOD_JK_URL}}"
+        dest : /opt
+        remote_src: yes
+
+    - name : get the statistics of modjk.so
+      stat :
+        path : /etc/httpd/modules/mod_jk.so
+      register : output
+
+    - name : compile MOD_JK
+      shell : "{{item}}"
+      args :
+        chdir: "/opt/{{MOD_JK_DIR}}/native"
+      with_items :
+        - ./configure --with-apxs=/bin/apxs
+        - make
+        - make install
+      when : output.stat.exists == false
+
+    - name : mod_jk.so checking
+      debug :
+        msg : "compilation is already done"
+      when : output.stat.exists == true
+
+    - name : create the modjk.conf and update with the content
+      blockinfile :
+        path : /etc/httpd/conf.d/modjk.conf
+        block : |
+          LoadModule jk_module modules/mod_jk.so
+          JkWorkersFile conf.d/workers.properties
+          JkLogFile logs/mod_jk.log
+          JkLogLevel info
+          JkLogStampFormat "[%a %b %d %H:%M:%S %Y]"
+          JkOptions +ForwardKeySize +ForwardURICompat -ForwardDirectories
+          JkRequestLogFormat "%w %V %T"
+          JkMount /student tomcatA
+          JkMount /student/* tomcatA
+        create : yes
+
+    - name : create workers.properties and update with the content
+      blockinfile :
+        path : /etc/httpd/conf.d/workers.properties
+        block : |
+          ### Define workers
+          worker.list=tomcatA
+          ### Set properties
+          worker.tomcatA.type=ajp13
+          worker.tomcatA.host=localhost
+          worker.tomcatA.port=8009
+        create : yes
+
+    - name : restart the web server
+      service :
+        name : httpd
+        state : restarted
+
+
+- name : create APP layer
+  hosts : DEV
+  become : yes
+  tags :
+    - APP
+  vars :
+    USERNAME : student
+    TOMCAT_PATH : /tomcat
+    TOMCAT_URL : http://redrockdigimark.com/apachemirror/tomcat/tomcat-9/v9.0.6/bin/apache-tomcat-9.0.6.tar.gz
+    WAR :
+      URL : https://github.com/devops2k18/DevOpsDecember/raw/master/APPSTACK/student.war
+      LOC : "{{TOMCAT_PATH}}/{{TOMCAT_DIR}}/webapps"
+    MYSQL :
+      URL : https://github.com/devops2k18/DevOpsDecember/raw/master/APPSTACK/mysql-connector-java-5.1.40.jar
+      LOC : "{{TOMCAT_PATH}}/{{TOMCAT_DIR}}/lib"
+  tasks :
+    - name : install java
+      yum :
+        name : java
+        state : latest
+
+    - name : create TOMCAT_DIR variable
+      shell : echo "{{TOMCAT_URL}}" | awk -F / '{print $NF}' | sed -e 's/.tar.gz//'
+      register : output
+
+    - name : define TOMCAT_DIR using set_fact
+      set_fact :
+        TOMCAT_DIR : "{{output.stdout}}"
+
+    - name : create an user for tomcat
+      user :
+        name : student
+
+    - name : create a directory for tomcat
+      file :
+        path : "{{TOMCAT_PATH}}"
+        state : directory
+        owner : "{{USERNAME}}"
+        group : "{{USERNAME}}"
+        mode : 0755
+
+    - name : downloading tomcat
+      unarchive :
+        src : "{{TOMCAT_URL}}"
+        dest : "{{TOMCAT_PATH}}"
+        remote_src: yes
+      become_user : "{{USERNAME}}"
+
+    - name : find the files and folders from webapps
+      find :
+        paths : "{{TOMCAT_PATH}}/{{TOMCAT_DIR}}/webapps"
+        file_type : any
+      register : out
+
+    - name : remove old artifacts
+      file :
+        path : "{{item.path}}"
+        state : absent
+      with_items : "{{out.files}}"
+
+    - name : download the student war file
+      get_url :
+        url : "{{item.URL}}"
+        dest : "{{item.LOC}}"
+      with_items :
+        - "{{WAR}}"
+        - "{{MYSQL}}"
+
+    - name : update the context.xml
+      blockinfile :
+        path : "{{TOMCAT_PATH}}/{{TOMCAT_DIR}}/conf/context.xml"
+        insertbefore : "</Context>"
+        block: |
+          <Resource name="jdbc/TestDB" auth="Container" type="javax.sql.DataSource" maxTotal="100" maxIdle="30"maxWaitMillis="10000" username="student" password="student@1" driverClassName="com.mysql.jdbc.Driver" url="jdbc:mysql://localhost:3306/studentapp"/>
+
+    - name : check tomcat running or not
+      shell : ps -ef | grep tomcat | grep -v grep
+      register : out
+      ignore_errors : true
+
+    - name : start the tomcat
+      shell : "nohup sh {{TOMCAT_PATH}}/{{TOMCAT_DIR}}/bin/startup.sh"
+      when : out is failed
+
+    - name : restart the tomcat
+      shell : "nohup sh {{TOMCAT_PATH}}/{{TOMCAT_DIR}}/bin/shutdown.sh && nohup sh {{TOMCAT_PATH}}/{{TOMCAT_DIR}}/bin/startup.sh"
+      when : out is success
+
+
+- name : create db layer
+  hosts : DEV
+  become : yes
+  tags :
+    - DB
+  tasks :
+    - name : install the mariadb
+      yum :
+        name : "{{item}}"
+        state : latest
+      with_items :
+        - mariadb
+        - mariadb-server
+        - MySQL-python
+
+    - name : start the mariadb
+      service :
+        name : mariadb
+        state : started
+
+    - name : copy the student sql file
+      copy :
+        src : /tmp/student.sql
+        dest : /tmp/student.sql
+
+    - name : run the sql file
+      mysql_db :
+        state : import
+        name : all
+        target : /tmp/student.sql
+
