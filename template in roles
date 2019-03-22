@@ -1,0 +1,5 @@
+For each application, all the environments have some common files. Some attributes of those common files are different based on their -
+environment. We use templates to handle different environments with minimal changes. For example, say we have a database connection string
+defined in a file and that file must be deployed in all environments, but the database name in each environment is different. In that situation,
+the deployment engineer would create a template and keep the database name as a variable, and that variable defined under each environment
+group_vars along with their proper database name.
